@@ -5,10 +5,6 @@ import httpx
 
 
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
-ALLOWED_LICENSES = {
-    "CC0", "Public domain", "CC BY", "CC BY-SA",
-    "Creative Commons Attribution", "Creative Commons Attribution-Share Alike",
-}
 
 
 def _plain(value: str, limit: int = 180) -> str:
@@ -18,12 +14,26 @@ def _plain(value: str, limit: int = 180) -> str:
     return value[:limit]
 
 
-async def research_design_references(prompt: str, limit: int = 4) -> list[dict]:
-    """Find openly licensed Wikimedia Commons images as visual research only.
+def _license_is_reusable(name: str) -> bool:
+    normalized = (name or "").strip().upper()
+    if "NONCOMMERCIAL" in normalized or "NC" in normalized.split():
+        return False
+    if "NODERIVATIVES" in normalized or "NO DERIVATIVES" in normalized or "ND" in normalized.split():
+        return False
+    return (
+        normalized.startswith("CC0")
+        or normalized.startswith("PUBLIC DOMAIN")
+        or normalized.startswith("CC BY ")
+        or normalized.startswith("CC BY-SA ")
+    )
 
-    Images are not downloaded, imported into Roblox, or redistributed by this
-    service. The returned records are citations and design context for the model.
-    A failure in the public search service must never block weapon generation.
+
+async def research_design_references(prompt: str, limit: int = 4) -> list[dict]:
+    """Find openly licensed Wikimedia Commons images as research citations.
+
+    The service returns image links and attribution metadata only. It does not
+    download, republish, or import reference images into a Roblox experience.
+    Search failure is non-fatal and never blocks weapon generation.
     """
     terms = re.findall(r"[\wÀ-ÿ-]{3,}", prompt, flags=re.UNICODE)[:7]
     if not terms:
@@ -34,7 +44,7 @@ async def research_design_references(prompt: str, limit: int = 4) -> list[dict]:
         "generator": "search",
         "gsrsearch": " ".join(terms),
         "gsrnamespace": 6,
-        "gsrlimit": max(1, min(limit * 2, 8)),
+        "gsrlimit": max(1, min(limit * 3, 10)),
         "prop": "imageinfo",
         "iiprop": "url|extmetadata",
         "iiurlwidth": 480,
@@ -60,12 +70,14 @@ async def research_design_references(prompt: str, limit: int = 4) -> list[dict]:
         metadata = info.get("extmetadata") or {}
         license_name = _plain((metadata.get("LicenseShortName") or {}).get("value", ""), 80)
         usage_terms = _plain((metadata.get("UsageTerms") or {}).get("value", ""), 100)
-        if not any(allowed.lower() in license_name.lower() for allowed in ALLOWED_LICENSES):
+        if not _license_is_reusable(license_name):
             continue
 
         title = _plain(page.get("title", "Visual reference"), 120)
+        description = _plain((metadata.get("ImageDescription") or {}).get("value", ""), 240)
         results.append({
             "title": title,
+            "description": description,
             "thumbnail_url": info.get("thumburl") or info.get("url"),
             "source_url": info.get("descriptionurl"),
             "license": license_name or usage_terms,

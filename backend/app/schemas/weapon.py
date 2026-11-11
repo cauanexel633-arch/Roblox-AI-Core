@@ -35,6 +35,8 @@ class WeaponVisualSpec(BaseModel):
     accent_color: str = Field(default="#FFD166", pattern=r"^#[0-9A-Fa-f]{6}$")
     detail_level: int = Field(default=3, ge=1, le=5)
     motif: str = Field(default="fantasy", min_length=2, max_length=40)
+    animation_style: Literal["quick_slash", "heavy_swing", "thrust", "cast", "punch"] = "quick_slash"
+    ui_theme: Literal["inferno", "frost", "arcane", "nature", "storm", "neutral"] = "neutral"
 
 
 class WeaponCombatSpec(BaseModel):

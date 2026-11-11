@@ -97,16 +97,51 @@ local function addParticles(target, color)
     emitter.Parent = attachment
 end
 
-local function buildSword(tool, handle, primary, accent, material)
+local function buildSword(tool, handle, primary, accent, material, visual)
+    local silhouette = visual.silhouette or "ornate"
+    local bladeWidths = {
+        slim = 0.42, heavy = 0.86, curved = 0.58, double = 0.48,
+        ornate = 0.62, segmented = 0.58, organic = 0.68,
+    }
+    local bladeWidth = bladeWidths[silhouette] or 0.62
+    local bladeRotation = silhouette == "curved" and CFrame.Angles(0, 0, math.rad(9)) or CFrame.new()
+
     part(tool, handle, "Grip", Vector3.new(0.28, 1.05, 0.28),
         CFrame.new(0, -0.45, 0), Color3.fromRGB(65, 42, 30), Enum.Material.Wood)
     part(tool, handle, "Guard", Vector3.new(1.25, 0.16, 0.32),
         CFrame.new(0, 0.25, 0), accent, Enum.Material.Metal)
-    local blade = part(tool, handle, "Blade", Vector3.new(0.62, 2.7, 0.15),
-        CFrame.new(0, 1.65, 0), primary, material)
+    local blade = part(tool, handle, "Blade", Vector3.new(bladeWidth, 2.7, 0.15),
+        CFrame.new(0, 1.65, 0) * bladeRotation, primary, material)
     local core = part(tool, handle, "BladeCore", Vector3.new(0.12, 2.35, 0.17),
         CFrame.new(0, 1.65, -0.09), accent, Enum.Material.Neon)
     addGlow(core, accent)
+
+    if silhouette == "double" then
+        part(tool, handle, "SecondBlade", Vector3.new(0.28, 1.8, 0.13),
+            CFrame.new(0, 2.05, 0.18) * CFrame.Angles(0, 0, math.rad(180)),
+            primary, material)
+    elseif silhouette == "segmented" then
+        for i = 1, 3 do
+            part(tool, handle, "BladeSegment" .. i, Vector3.new(bladeWidth + 0.08, 0.08, 0.2),
+                CFrame.new(0, 0.75 + i * 0.62, -0.02), accent, Enum.Material.Neon)
+        end
+    end
+
+    local detailCount = math.clamp(tonumber(visual.detail_level) or 3, 1, 5)
+    if visual.pattern == "runic" or silhouette == "ornate" then
+        for i = 1, detailCount do
+            part(tool, handle, "Rune" .. i, Vector3.new(0.09, 0.16, 0.035),
+                CFrame.new(0, 0.75 + i * 0.34, -0.105), accent, Enum.Material.Neon)
+        end
+    elseif visual.pattern == "serrated" then
+        for i = 1, detailCount do
+            local side = i % 2 == 0 and 1 or -1
+            part(tool, handle, "Serration" .. i, Vector3.new(0.13, 0.22, 0.12),
+                CFrame.new(side * (bladeWidth * 0.5), 0.55 + i * 0.35, 0),
+                accent, Enum.Material.Metal)
+        end
+    end
+
     local a0 = Instance.new("Attachment")
     a0.Position = Vector3.new(0, -1.25, 0)
     a0.Parent = blade
@@ -205,6 +240,7 @@ function WeaponFactory.Create(spec)
     tool:SetAttribute("PrimaryColor", spec.color or "#B4B4C8")
     tool:SetAttribute("AccentColor", visual.accent_color or "#FFD166")
     tool:SetAttribute("ParticleStyle", tostring(visual.particle_style or "sparks"))
+    tool:SetAttribute("VisualMotif", string.sub(tostring(visual.motif or "fantasy"), 1, 40))
     tool:SetAttribute("AnimationStyle", tostring(visual.animation_style or "quick_slash"))
     tool:SetAttribute("UITheme", tostring(visual.ui_theme or "neutral"))
     tool:SetAttribute("Description", tostring(spec.description or ""))
@@ -219,7 +255,7 @@ function WeaponFactory.Create(spec)
     handle.Massless = true
     handle.Parent = tool
 
-    builder(tool, handle, primary, particleColor, material)
+    builder(tool, handle, primary, particleColor, material, visual)
     return tool
 end
 

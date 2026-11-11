@@ -144,9 +144,27 @@ local function perform(player, tool, action)
     local range = math.clamp(tool:GetAttribute("Range") or 10, 6, 30)
     local damage = math.clamp(tool:GetAttribute("Damage") or 10, 5, 60)
     local abilityRadius = math.clamp(tool:GetAttribute("EffectRadius") or 8, 0, 20)
-    local radius = action == "Ability" and math.max(abilityRadius, 4) or math.min(range * 0.55, 9)
-    local center = root.Position + root.CFrame.LookVector * (action == "Ability" and math.min(range * 0.5, 12) or 4)
-    local color = getColor(tool)
+    local abilityStyle = ABILITY_STYLES[tool:GetAttribute("AbilityId")] or ABILITY_STYLES.slash
+    local radius = action == "Ability"
+        and math.clamp(math.max(abilityRadius, 4) * abilityStyle.radius, 3, 20)
+        or math.min(range * 0.55, 9)
+    local center = root.Position + root.CFrame.LookVector
+        * (action == "Ability" and math.min(range * 0.5, 12) or 4)
+    local color = action == "Ability" and abilityStyle.color or getColor(tool)
+    local attackStyle = tool:GetAttribute("AttackStyle") or "melee"
+    local abilityId = tool:GetAttribute("AbilityId")
+
+    if action == "Attack" and attackStyle == "projectile" then
+        launchProjectile(player, tool, root, damage, range, color)
+        return
+    end
+
+    if (action == "Attack" and attackStyle == "dash")
+        or (action == "Ability" and abilityId == "dash_strike") then
+        root.AssemblyLinearVelocity = root.CFrame.LookVector * 48 + Vector3.new(0, 7, 0)
+        center = root.Position + root.CFrame.LookVector * 6
+        radius = math.clamp(radius, 4, 9)
+    end
 
     local params = OverlapParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
@@ -154,13 +172,14 @@ local function perform(player, tool, action)
 
     local found = workspace:GetPartBoundsInRadius(center, radius, params)
     local hitHumanoids = {}
-    for _, part in ipairs(found) do
-        local model = part:FindFirstAncestorOfClass("Model")
+    for _, hitPart in ipairs(found) do
+        local model = hitPart:FindFirstAncestorOfClass("Model")
         local humanoid = model and model:FindFirstChildOfClass("Humanoid")
         local targetRoot = model and model:FindFirstChild("HumanoidRootPart")
         if humanoid and targetRoot and humanoid.Health > 0 and not hitHumanoids[humanoid] then
-            local distance = (targetRoot.Position - root.Position).Magnitude
-            local facing = root.CFrame.LookVector:Dot((targetRoot.Position - root.Position).Unit)
+            local direction = targetRoot.Position - root.Position
+            local distance = direction.Magnitude
+            local facing = distance > 0 and root.CFrame.LookVector:Dot(direction.Unit) or 1
             if distance <= range and (action == "Ability" or facing > -0.1) then
                 hitHumanoids[humanoid] = true
                 humanoid:TakeDamage(damage * (action == "Ability" and 1.5 or 1))

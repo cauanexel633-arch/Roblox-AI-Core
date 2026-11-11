@@ -60,6 +60,8 @@ async def research_design_references(prompt: str, limit: int = 4) -> list[dict]:
     except (httpx.HTTPError, ValueError):
         return []
 
+    if not isinstance(payload, dict):
+        return []
     pages = (payload.get("query") or {}).get("pages") or {}
     results: list[dict] = []
     for page in pages.values():

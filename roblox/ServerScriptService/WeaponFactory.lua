@@ -205,6 +205,8 @@ function WeaponFactory.Create(spec)
     tool:SetAttribute("PrimaryColor", spec.color or "#B4B4C8")
     tool:SetAttribute("AccentColor", visual.accent_color or "#FFD166")
     tool:SetAttribute("ParticleStyle", tostring(visual.particle_style or "sparks"))
+    tool:SetAttribute("AnimationStyle", tostring(visual.animation_style or "quick_slash"))
+    tool:SetAttribute("UITheme", tostring(visual.ui_theme or "neutral"))
     tool:SetAttribute("Description", tostring(spec.description or ""))
 
     local handle = Instance.new("Part")

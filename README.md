@@ -147,7 +147,7 @@ No Creator Dashboard/Studio, configure o Secret `ROBLOX_AI_CORE_KEY` com o mesmo
 - O modelo nunca retorna código executável, scripts, require ou IDs arbitrários de assets.
 - Os metadados de pesquisa externa são tratados como dados não confiáveis.
 - Os efeitos e geometria são procedurais e usam recursos Roblox nativos; não há upload automático de malhas, texturas, sons ou animações personalizadas.
-- `animation_style` é uma direção de animação escolhida pela IA, ainda não uma animação customizada publicada. Animações próprias exigem assets de animação aprovados ou implementação procedural adicional.
+- `animation_style` é escolhido pela IA e aciona um balanço procedural local do braço no HUD. Isso não substitui animações customizadas publicadas; para animações cinematográficas, importe assets próprios aprovados.
 - Inventário persistente/DataStore, comércio e economia ainda não fazem parte desta entrega.
 - A pesquisa Commons é best-effort; referências podem ser vazias e precisam de revisão humana.
 - `openrouter/free` tem disponibilidade e capacidades variáveis. Se o modelo não respeitar o schema, a validação rejeita a geração.

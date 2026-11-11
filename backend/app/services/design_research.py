@@ -16,9 +16,9 @@ def _plain(value: str, limit: int = 180) -> str:
 
 def _license_is_reusable(name: str) -> bool:
     normalized = (name or "").strip().upper()
-    if "NONCOMMERCIAL" in normalized or "NC" in normalized.split():
+    if "NONCOMMERCIAL" in normalized or re.search(r"-NC(?:-|$)", normalized):
         return False
-    if "NODERIVATIVES" in normalized or "NO DERIVATIVES" in normalized or "ND" in normalized.split():
+    if "NODERIVATIVES" in normalized or "NO DERIVATIVES" in normalized or re.search(r"-ND(?:-|$)", normalized):
         return False
     return (
         normalized.startswith("CC0")

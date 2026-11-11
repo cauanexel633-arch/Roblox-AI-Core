@@ -94,6 +94,15 @@ attackCorner.Parent = attack
 local equippedTool
 local abilityBusy = false
 
+local UI_THEMES = {
+    inferno = Color3.fromRGB(220, 75, 45),
+    frost = Color3.fromRGB(55, 155, 220),
+    arcane = Color3.fromRGB(145, 85, 220),
+    nature = Color3.fromRGB(55, 155, 105),
+    storm = Color3.fromRGB(70, 115, 210),
+    neutral = Color3.fromRGB(105, 80, 210),
+}
+
 local function refresh(tool)
     equippedTool = tool
     if not tool then

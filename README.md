@@ -1,78 +1,161 @@
-# Roblox AI Core — AI Weapon Creator (MVP)
+# Roblox AI Core 2.0 — AI Weapon Creator
 
-Backend FastAPI + OpenRouter e integração Roblox Luau. A IA gera apenas dados estruturados de arma; o servidor Roblox valida os dados e constrói um Tool localmente. Nenhum código retornado pela IA é executado.
+FastAPI + OpenRouter + Roblox Luau. A IA agora projeta uma ficha completa de arma (aparência, combate, estilo de animação e tema da interface), pesquisa referências visuais com metadados de licença aberta e entrega os dados ao servidor Roblox. O Roblox constrói e executa o jogo com módulos locais e allowlists. **Nenhum código Lua gerado pela IA é executado.**
 
-## 1. Requisitos
-- Windows 10/11
-- Python 3.11 ou 3.12
-- Roblox Studio
-- Conta OpenRouter e chave em https://openrouter.ai/keys
+## Arquitetura 2.0
 
-## 2. Instalar backend no Windows
+```text
+Roblox Creator UI (LocalScript)
+        |
+        v
+GenerateWeapon (RemoteFunction)
+        |
+        v
+AIWeaponServer (servidor Roblox)
+        | HTTPS + Secret
+        v
+FastAPI /v1/weapons/generate
+        |
+        +--> Wikimedia Commons DesignResearch (opcional, falha não bloqueia)
+        |
+        +--> OpenRouter (JSON estruturado)
+        |
+        v
+WeaponSpec validado
+        |
+        v
+WeaponFactory -> Tool 3D + atributos + efeitos visuais
+WeaponCombat  -> dano, alcance, cooldown e habilidade no servidor
+WeaponHUD     -> controles e tema de interface PC/mobile
+```
+
+### O que a IA decide
+- Nome, descrição, tipo, raridade, dano, cooldown, alcance e habilidade.
+- Silhueta, material, padrão, cores, partículas, nível de detalhe e motivo visual.
+- Estilo de animação sugerido e tema de interface.
+- Estilo de ataque, combo, raio de efeito e knockback, sempre dentro de limites.
+
+### O que o runtime Roblox executa
+- Construção procedural de espadas, cajados, arcos e manoplas.
+- Partículas, luzes, trail e detalhes geométricos.
+- Ataque básico e habilidade especial com verificação de dano no servidor.
+- HUD responsivo com botão de ataque e habilidade (tecla Q no PC e botão touch).
+- Interface de criação com TextBox, estado de carregamento e retorno do resultado.
+
+## Pesquisa visual híbrida
+
+O backend pesquisa o Wikimedia Commons e devolve referências com título, descrição, miniatura, página de origem, autor e licença. O modelo recebe os metadados textuais como inspiração; os links ficam disponíveis no retorno da API para inspeção humana.
+
+A pesquisa não baixa nem importa imagens automaticamente para o Roblox. O modelo não recebe pixels das imagens nesta versão: a pesquisa é baseada em títulos e descrições. A biblioteca procedural aprovada fica no código do `WeaponFactory` (materiais, geometrias, partículas e padrões). Falha no Wikimedia Commons não bloqueia a criação.
+
+São filtradas licenças permissivas (CC0, domínio público, CC BY e CC BY-SA); licenças NC/ND são excluídas. Confira a página e as obrigações de atribuição antes de reutilizar qualquer arquivo visual.
+
+## Estrutura de arquivos
+
+```text
+backend/
+  app/
+    main.py
+    schemas/weapon.py
+    services/openrouter.py
+    services/design_research.py
+roblox/
+  ServerScriptService/
+    AIWeaponServer.server.lua
+    WeaponFactory.lua
+    WeaponCombat.server.lua
+  StarterPlayer/StarterPlayerScripts/
+    WeaponCreator.client.lua
+    WeaponHUD.client.lua
+  ReplicatedStorage/
+    AIWeaponRemote.lua (helper opcional)
+```
+
+## 1. Backend no Windows
+
+Requisitos: Python 3.11/3.12, Roblox Studio, conta OpenRouter.
+
 Abra PowerShell na pasta `backend`:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\\.venv\\Scripts\\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edite `.env` e informe `OPENROUTER_API_KEY`. Gere um segredo de autenticação com:
+Configure `OPENROUTER_API_KEY` e `ROBLOX_AI_CORE_KEY` em `.env`. Gere o segredo Roblox:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Copie o resultado para `ROBLOX_AI_CORE_KEY` no `.env`. Não publique esse arquivo e não o envie ao Roblox.
-
-Inicie:
+Inicie o backend:
 
 ```powershell
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Teste `http://127.0.0.1:8000/health` no navegador. A documentação interativa fica em `http://127.0.0.1:8000/docs`.
+Teste `http://127.0.0.1:8000/health`. A documentação fica em `http://127.0.0.1:8000/docs`.
 
-## 3. Testar a geração localmente
-Em outro PowerShell, substitua `SUA_CHAVE_ROBLOX` pelo mesmo valor configurado em `.env`:
+## 2. Deploy Vercel
 
-```powershell
-$headers = @{ "x-api-key" = "SUA_CHAVE_ROBLOX" }
-$body = @{ prompt = "Uma espada de gelo que dispara estilhaços"; player_id = 123456; game_id = "teste" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/v1/weapons/generate" -Method Post -Headers $headers -ContentType "application/json" -Body $body
-```
+O backend continua usando o mesmo endpoint `POST /v1/weapons/generate`, então a URL existente permanece compatível. Faça deploy do commit atualizado e confirme `/health` com versão `2.0.0`.
 
-## 4. Expor backend para Roblox Studio
-Roblox não acessa o localhost do seu PC a partir de servidores publicados. Para teste no Studio, use um túnel HTTPS confiável (por exemplo, Cloudflare Tunnel) apontando para `http://127.0.0.1:8000`, ou hospede o backend em um serviço HTTPS. O computador precisa permanecer ligado enquanto o túnel/local backend estiver em uso.
+Variáveis de ambiente:
+- `OPENROUTER_API_KEY`
+- `ROBLOX_AI_CORE_KEY`
+- `OPENROUTER_MODEL` (opcional; padrão atual do projeto: `openrouter/free`)
+- `OPENROUTER_SITE_URL` (opcional)
+- `OPENROUTER_APP_NAME` (opcional)
 
-Configure `API_URL` em `AIWeaponServer.server.lua` com o endereço HTTPS público e `/v1/weapons/generate`.
+A pesquisa Commons não exige chave. Se estiver indisponível, a geração continua sem referências.
 
-## 5. Configurar Roblox
-1. No Creator Dashboard, abra a experiência e crie um Secret chamado `ROBLOX_AI_CORE_KEY` com o mesmo segredo do `.env`.
-2. Autorize o domínio HTTPS do backend para esse Secret.
-3. Para testes no Studio, configure também o Secret em `File > Experience Settings > Security > Local Secrets`, se disponível na sua experiência.
-4. Ative `Allow HTTP Requests` em `File > Experience Settings > Security`.
-5. Crie um Script `AIWeaponServer.server.lua` em `ServerScriptService`.
-6. Crie um ModuleScript `WeaponFactory` em `ServerScriptService` e cole o código fornecido.
-7. Ajuste `API_URL` para o domínio HTTPS real.
-8. Crie uma interface com um TextBox e botão. No LocalScript do botão, invoque `ReplicatedStorage.GenerateWeapon:InvokeServer(texto)` e mostre `result.weapon.name` ou `result.error`.
+## 3. Instalação no Roblox Studio
 
-## 6. Segurança e limitações do MVP
-- A chave OpenRouter fica somente no backend.
-- O segredo de autenticação Roblox fica no Secrets Store, não em LocalScripts.
-- O cliente nunca chama OpenRouter diretamente.
-- O servidor Roblox valida tipos, habilidades e dano antes de criar o Tool.
-- O backend aplica limites em memória por UserId. Reiniciar o backend zera esses contadores; para produção com múltiplas instâncias, migrar para Redis/limitação distribuída.
-- O backend autentica o segredo compartilhado, mas ainda não prova criptograficamente que um pedido veio de um servidor Roblox legítimo. Para produção, adicionar assinatura HMAC por requisição ou gateway autenticado e controles anti-replay.
-- O MVP não implementa persistência de armas, inventário, efeitos de combate, moderação completa de texto ou economia.
-- `openrouter/free` pode selecionar modelos diferentes ao longo do tempo. Modelos gratuitos têm limites e disponibilidade variável. Para uso público, configure limites próprios e um fallback de erro.
-- Não envie dados pessoais dos jogadores para o modelo.
+Ative `Allow HTTP Requests` em Experience Settings > Security.
 
-## 7. Próximos passos
-1. Interface de criação dentro do jogo.
-2. Sistema de habilidades reais no servidor (cooldown, dano, efeitos).
-3. Moderação de prompts e nomes.
-4. Persistência e inventário.
-5. Métricas, logs e limites distribuídos.
+Crie/atualize a hierarquia:
+1. `ServerScriptService/AIWeaponServer.server.lua` — Script.
+2. `ServerScriptService/WeaponFactory.lua` — ModuleScript.
+3. `ServerScriptService/WeaponCombat.server.lua` — Script.
+4. `StarterPlayer/StarterPlayerScripts/WeaponCreator.client.lua` — LocalScript.
+5. `StarterPlayer/StarterPlayerScripts/WeaponHUD.client.lua` — LocalScript.
+
+Cole os arquivos correspondentes do repositório. O servidor cria automaticamente `ReplicatedStorage.GenerateWeapon` e `ReplicatedStorage.WeaponAction`.
+
+No Creator Dashboard/Studio, configure o Secret `ROBLOX_AI_CORE_KEY` com o mesmo valor de `ROBLOX_AI_CORE_KEY` do backend e autorize o domínio HTTPS `roblox-ai-core.vercel.app`. O segredo nunca deve estar em LocalScripts.
+
+**Importante:** remova/desative scripts antigos que também definem `GenerateWeapon.OnServerInvoke` ou constroem a mesma arma. Deve existir apenas um servidor responsável pela geração.
+
+## 4. Teste
+
+1. Publique/deploy o backend e confirme `/health` com versão 2.0.0.
+2. Inicie um teste Play no Studio.
+3. Clique em **CRIAR ARMA IA**.
+4. Descreva uma arma com pelo menos 5 caracteres.
+5. Aguarde a pesquisa e a geração. A Tool deve aparecer na Backpack.
+6. Equipe a arma. O HUD deve mostrar atributos; ataque com clique/botão e use habilidade com Q ou botão touch.
+7. Verifique Output do servidor para mensagens de inicialização/erros.
+
+## 5. Segurança e limitações desta versão
+
+- OpenRouter e segredo de backend ficam fora do cliente.
+- O servidor Roblox valida campos e limites antes de construir a Tool.
+- Dano, cooldown, alcance e alvos são verificados no servidor. O cliente só solicita a ação.
+- O modelo nunca retorna código executável, scripts, require ou IDs arbitrários de assets.
+- Os metadados de pesquisa externa são tratados como dados não confiáveis.
+- Os efeitos e geometria são procedurais e usam recursos Roblox nativos; não há upload automático de malhas, texturas, sons ou animações personalizadas.
+- `animation_style` é uma direção de animação escolhida pela IA, ainda não uma animação customizada publicada. Animações próprias exigem assets de animação aprovados ou implementação procedural adicional.
+- Inventário persistente/DataStore, comércio e economia ainda não fazem parte desta entrega.
+- A pesquisa Commons é best-effort; referências podem ser vazias e precisam de revisão humana.
+- `openrouter/free` tem disponibilidade e capacidades variáveis. Se o modelo não respeitar o schema, a validação rejeita a geração.
+- O rate limit atual é em memória e não distribuído entre instâncias Vercel.
+
+## Documentação oficial
+
+- Roblox RemoteEvents/RemoteFunctions: https://create.roblox.com/docs/scripting/events/remote
+- Segurança client-server: https://create.roblox.com/docs/scripting/security/client-server-boundary
+- HttpService: https://create.roblox.com/docs/reference/engine/classes/HttpService
+- Wikimedia Commons API: https://www.mediawiki.org/wiki/API:Search

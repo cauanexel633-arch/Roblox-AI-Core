@@ -114,6 +114,11 @@ local function refresh(tool)
     local cooldown = tool:GetAttribute("Cooldown") or 0
     local range = tool:GetAttribute("Range") or 0
     local rarity = tostring(tool:GetAttribute("Rarity") or "common"):upper()
+    local theme = tostring(tool:GetAttribute("UITheme") or "neutral")
+    local themeColor = UI_THEMES[theme] or UI_THEMES.neutral
+    stroke.Color = themeColor
+    ability.BackgroundColor3 = themeColor
+    ability.Text = string.upper(tostring(tool:GetAttribute("AbilityId") or "ABILITY")) .. "  [Q]"
     title.Text = tostring(tool.Name)
     stats.Text = string.format("%s  •  DANO %d  •  ALCANCE %d  •  %.1fs", rarity, damage, range, cooldown)
     panel.Visible = true
@@ -123,9 +128,36 @@ local function refresh(tool)
     }):Play()
 end
 
+local function animateWeapon(tool)
+    local character = player.Character
+    if not character then return end
+    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    if not torso then return end
+    local shoulder = torso:FindFirstChild("RightShoulder") or torso:FindFirstChild("Right Shoulder")
+    if not shoulder or not shoulder:IsA("Motor6D") then return end
+
+    local style = tostring(tool:GetAttribute("AnimationStyle") or "quick_slash")
+    local angles = {
+        quick_slash = -70,
+        heavy_swing = -105,
+        thrust = -35,
+        cast = 35,
+        punch = -80,
+    }
+    local original = shoulder.C0
+    local target = original * CFrame.Angles(math.rad(angles[style] or -70), 0, 0)
+    local out = TweenService:Create(shoulder, TweenInfo.new(0.12, Enum.EasingStyle.Quad), {C0 = target})
+    local back = TweenService:Create(shoulder, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {C0 = original})
+    out:Play()
+    out.Completed:Once(function()
+        back:Play()
+    end)
+end
+
 local function connectTool(tool)
     if not tool:IsA("Tool") or not tool:GetAttribute("ItemID") then return end
     tool.Equipped:Connect(function() refresh(tool) end)
+    tool.Activated:Connect(function() animateWeapon(tool) end)
     tool.Unequipped:Connect(function()
         if equippedTool == tool then refresh(nil) end
     end)

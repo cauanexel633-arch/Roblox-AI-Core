@@ -42,7 +42,7 @@ async def create_weapon(data: GenerateWeaponRequest):
     # Search failure is non-fatal; generation continues without references.
     references = await research_design_references(data.prompt, limit=4)
     reference_notes = [
-        f"{item.get('title', '')}; license: {item.get('license', '')}"
+        f"{item.get('title', '')}; {item.get('description', '')}; license: {item.get('license', '')}"
         for item in references
     ]
 

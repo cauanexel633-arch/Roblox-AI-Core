@@ -17,6 +17,15 @@ end
 local lastUse = {}
 local boundTools = {}
 
+local ABILITY_STYLES = {
+    fire_burst = { color = Color3.fromRGB(255, 95, 35), radius = 1.0 },
+    ice_bolt = { color = Color3.fromRGB(100, 205, 255), radius = 0.75 },
+    dash_strike = { color = Color3.fromRGB(190, 100, 255), radius = 0.65 },
+    poison_orb = { color = Color3.fromRGB(105, 235, 85), radius = 0.85 },
+    chain_lightning = { color = Color3.fromRGB(255, 225, 90), radius = 1.15 },
+    slash = { color = Color3.fromRGB(220, 225, 240), radius = 0.7 },
+}
+
 local function equippedTool(player)
     local character = player.Character
     if not character then return nil end

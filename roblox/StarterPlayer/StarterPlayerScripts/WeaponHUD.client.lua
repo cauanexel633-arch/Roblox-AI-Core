@@ -93,6 +93,7 @@ attackCorner.Parent = attack
 
 local equippedTool
 local abilityBusy = false
+local boundTools = {}
 
 local UI_THEMES = {
     inferno = Color3.fromRGB(220, 75, 45),
@@ -155,7 +156,9 @@ local function animateWeapon(tool)
 end
 
 local function connectTool(tool)
-    if not tool:IsA("Tool") or not tool:GetAttribute("ItemID") then return end
+    if not tool:IsA("Tool") or not tool:GetAttribute("ItemID") or boundTools[tool] then return end
+    boundTools[tool] = true
+    tool.Destroying:Connect(function() boundTools[tool] = nil end)
     tool.Equipped:Connect(function() refresh(tool) end)
     tool.Activated:Connect(function() animateWeapon(tool) end)
     tool.Unequipped:Connect(function()

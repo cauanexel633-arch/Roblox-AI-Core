@@ -38,7 +38,7 @@ WeaponHUD     -> controles e tema de interface PC/mobile
 ### O que o runtime Roblox executa
 - Construção procedural de espadas, cajados, arcos e manoplas.
 - Partículas, luzes, trail e detalhes geométricos.
-- Ataque básico e habilidade especial com verificação de dano no servidor.
+- Ataque básico melee, projétil e dash; habilidade especial em área, com dano, alcance e cooldown verificados no servidor.
 - HUD responsivo com botão de ataque e habilidade (tecla Q no PC e botão touch).
 - Interface de criação com TextBox, estado de carregamento e retorno do resultado.
 

@@ -32,6 +32,18 @@ local ALLOWED_ABILITIES = {
     slash = true, fire_burst = true, ice_bolt = true,
     dash_strike = true, poison_orb = true, chain_lightning = true,
 }
+local ALLOWED_RARITIES = { common = true, uncommon = true, rare = true, epic = true, legendary = true }
+local ALLOWED_MATERIALS = { metal = true, obsidian = true, wood = true, crystal = true, stone = true }
+local ALLOWED_SILHOUETTES = { slim = true, heavy = true, curved = true, double = true, ornate = true, segmented = true, organic = true }
+local ALLOWED_PATTERNS = { plain = true, runic = true, serrated = true, flame = true, frost = true, lightning = true }
+local ALLOWED_PARTICLES = { fire = true, ice = true, sparks = true, poison = true, arcane = true, lightning = true, none = true }
+local ALLOWED_ANIMATIONS = { quick_slash = true, heavy_swing = true, thrust = true, cast = true, punch = true }
+local ALLOWED_UI_THEMES = { inferno = true, frost = true, arcane = true, nature = true, storm = true, neutral = true }
+local ALLOWED_ATTACK_STYLES = { melee = true, projectile = true, dash = true }
+
+local function isColor(value)
+    return typeof(value) == "string" and value:match("^#%x%x%x%x%x%x$") ~= nil
+end
 
 local function validateWeapon(weapon)
     if typeof(weapon) ~= "table" then return false end
@@ -41,7 +53,30 @@ local function validateWeapon(weapon)
     if typeof(weapon.damage) ~= "number" or weapon.damage < 5 or weapon.damage > 60 then return false end
     if typeof(weapon.cooldown) ~= "number" or weapon.cooldown < 0.8 or weapon.cooldown > 5 then return false end
     if typeof(weapon.range) ~= "number" or weapon.range < 6 or weapon.range > 30 then return false end
-    if typeof(weapon.color) ~= "string" or not weapon.color:match("^#%x%x%x%x%x%x$") then return false end
+    if not isColor(weapon.color) then return false end
+    if not ALLOWED_RARITIES[weapon.rarity] then return false end
+
+    local visual = weapon.visual
+    if visual ~= nil then
+        if typeof(visual) ~= "table" then return false end
+        if not ALLOWED_SILHOUETTES[visual.silhouette] then return false end
+        if not ALLOWED_MATERIALS[visual.material] then return false end
+        if not ALLOWED_PATTERNS[visual.pattern] then return false end
+        if not ALLOWED_PARTICLES[visual.particle_style] then return false end
+        if not ALLOWED_ANIMATIONS[visual.animation_style] then return false end
+        if not ALLOWED_UI_THEMES[visual.ui_theme] then return false end
+        if not isColor(visual.accent_color) then return false end
+        if typeof(visual.detail_level) ~= "number" or visual.detail_level < 1 or visual.detail_level > 5 then return false end
+    end
+
+    local combat = weapon.combat
+    if combat ~= nil then
+        if typeof(combat) ~= "table" or not ALLOWED_ATTACK_STYLES[combat.attack_style] then return false end
+        if typeof(combat.combo_count) ~= "number" or combat.combo_count < 1 or combat.combo_count > 4 then return false end
+        if typeof(combat.effect_radius) ~= "number" or combat.effect_radius < 0 or combat.effect_radius > 20 then return false end
+        if typeof(combat.knockback) ~= "number" or combat.knockback < 0 or combat.knockback > 40 then return false end
+        if typeof(combat.ability_duration) ~= "number" or combat.ability_duration < 0.2 or combat.ability_duration > 8 then return false end
+    end
     return true
 end
 

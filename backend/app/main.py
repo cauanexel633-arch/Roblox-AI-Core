@@ -34,5 +34,9 @@ async def create_weapon(data: GenerateWeaponRequest):
         if status == 429:
             raise HTTPException(status_code=503, detail="Provedor de IA temporariamente limitado. Tente novamente mais tarde.")
         raise HTTPException(status_code=502, detail="O provedor de IA retornou um erro.")
-    except (KeyError, IndexError, TypeError, ValueError):
-        raise HTTPException(status_code=502, detail="A IA retornou uma ficha inválida. Tente novamente.")
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        # Exibe apenas a mensagem de validação controlada, nunca tokens ou payloads.
+        raise HTTPException(
+            status_code=502,
+            detail=f"Falha ao processar resposta da IA: {str(exc)[:300]}",
+        )

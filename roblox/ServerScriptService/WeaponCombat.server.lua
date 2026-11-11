@@ -88,6 +88,50 @@ local function getColor(tool)
     )
 end
 
+local function launchProjectile(player, tool, root, damage, range, color)
+    local direction = root.CFrame.LookVector
+    local origin = root.Position + direction * 3 + Vector3.new(0, 1.2, 0)
+    local projectile = Instance.new("Part")
+    projectile.Name = "AIWeaponProjectile"
+    projectile.Shape = Enum.PartType.Ball
+    projectile.Size = Vector3.new(0.55, 0.55, 0.55)
+    projectile.Material = Enum.Material.Neon
+    projectile.Color = color
+    projectile.Anchored = false
+    projectile.CanCollide = false
+    projectile.CanTouch = true
+    projectile.CanQuery = false
+    projectile.Massless = true
+    projectile.CFrame = CFrame.new(origin)
+    projectile.Parent = workspace
+    pcall(function() projectile:SetNetworkOwner(nil) end)
+    projectile.AssemblyLinearVelocity = direction * 95
+
+    local hit = false
+    local connection
+    connection = projectile.Touched:Connect(function(otherPart)
+        if hit then return end
+        local model = otherPart:FindFirstAncestorOfClass("Model")
+        if not model or model == player.Character then return end
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        local targetRoot = model:FindFirstChild("HumanoidRootPart")
+        if not humanoid or not targetRoot or humanoid.Health <= 0 then return end
+        if (targetRoot.Position - root.Position).Magnitude > range + 4 then return end
+
+        hit = true
+        humanoid:TakeDamage(damage)
+        local knockback = math.clamp(tool:GetAttribute("Knockback") or 0, 0, 40)
+        if knockback > 0 then
+            targetRoot.AssemblyLinearVelocity += direction * knockback
+        end
+        makeImpact(targetRoot.Position, color, 4)
+        if connection then connection:Disconnect() end
+        projectile:Destroy()
+    end)
+
+    Debris:AddItem(projectile, math.clamp(range / 95 + 0.35, 0.5, 1.5))
+end
+
 local function perform(player, tool, action)
     if not tool or tool.Parent ~= player.Character then return end
     if not cooldownReady(player, tool, action) then return end
